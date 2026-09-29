@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SBCS Potenzialanalyse Hamburg</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-w: 320px;
+      --bg: #f4f3f0;
+      --panel: #ffffff;
+      --border: #e2e0db;
+      --text: #1a1a18;
+      --muted: #7a7870;
+      --accent: #4a3f8f;
+      --accent-light: #ede9fc;
+      --hover: #f7f6f2;
+      --ramp-0: #f5f4f0;
+      --ramp-1: #ddd4f0;
+      --ramp-2: #b8a8e0;
+      --ramp-3: #8f7bcf;
+      --ramp-4: #6a53ba;
+      --ramp-5: #4a3f8f;
+      --ramp-6: #2d2360;
+    }
+
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); }
+
+    #app { display: flex; height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    #sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tool-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .tool-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .tool-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    #sidebar-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+    /* ── MODE TOGGLE ── */
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 20px;
+    }
+
+    .mode-btn {
+      padding: 7px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .mode-btn.active {
+      background: var(--panel);
+      color: var(--accent);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* ── CONTROLS ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      margin-top: 18px;
+    }
+
+    .section-label:first-child { margin-top: 0; }
+
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a7870' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      margin-bottom: 10px;
+    }
+
+    select:focus { outline: none; border-color: var(--accent); }
+
+    /* ── DARSTELLUNG (Basemap / Farbskala / Transparenz) ── */
+    .opacity-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .opacity-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .opacity-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 34px;
+      text-align: right;
+    }
+
+    /* ── STAT BOX ── */
+    #stat-box {
+      background: var(--accent-light);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 6px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .stat-row:last-child { margin-bottom: 0; }
+
+    .stat-key {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .stat-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    /* ── LEGEND ── */
+    #legend-wrap { margin-top: 20px; }
+
+    .legend-bar {
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(to right,
+        var(--ramp-0), var(--ramp-2), var(--ramp-4), var(--ramp-6));
+      margin: 6px 0;
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend-title {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    /* ── POPUP INFO ── */
+    #info-panel {
+      margin: 0 -16px -16px;
+      border-top: 1px solid var(--border);
+      padding: 16px;
+      min-height: 120px;
+      background: var(--hover);
+    }
+
+    .info-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .info-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .info-item {
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 7px 9px;
+    }
+
+    .info-item-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .info-item-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .info-placeholder {
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+      padding-top: 4px;
+    }
+
+    /* ── AUSWAHLWERKZEUGE (Vergleich / Isolieren) ── */
+    #selection-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 20px -16px 0;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .toggle-check {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .toggle-check input { accent-color: var(--accent); cursor: pointer; }
+
+    /* ── VERGLEICHSTABELLE ── */
+    .compare-table-wrap {
+      overflow-x: auto;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .compare-table {
+      border-collapse: collapse;
+      font-size: 11px;
+      width: 100%;
+    }
+
+    .compare-table th, .compare-table td {
+      padding: 6px 9px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .compare-table th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--panel);
+    }
+
+    .compare-th-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .compare-th-name {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: none;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .compare-table td:first-child, .compare-table th:first-child {
+      position: sticky;
+      left: 0;
+      background: var(--hover);
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .compare-section-row td {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 7px 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .compare-subrow td:first-child {
+      padding-left: 18px;
+      font-style: italic;
+      opacity: 0.8;
+    }
+
+    .compare-remove {
+      margin-left: 6px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .compare-remove:hover { color: var(--accent); }
+
+    .compare-clear {
+      width: 100%;
+      padding: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .compare-clear:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── VERGLEICH: kompakte Sidebar-Chips + Öffnen-Button ── */
+    .compare-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .compare-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent-light);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 6px 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .compare-chip strong {
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .compare-chip button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .compare-open-btn {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .compare-open-btn:hover { opacity: 0.88; }
+
+    /* ── VERGLEICH: großes Modal ── */
+    #compare-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(11,11,11,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 24px;
+    }
+
+    #compare-modal-backdrop.hidden { display: none; }
+
+    #compare-modal {
+      background: var(--panel);
+      border-radius: 14px;
+      width: min(94vw, 1240px);
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    #compare-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #compare-modal-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #compare-modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: none;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #compare-modal-close:hover { background: var(--hover); color: var(--accent); }
+
+    #compare-modal-body {
+      padding: 20px 22px 22px;
+      overflow-y: auto;
+    }
+
+    #compare-modal-body .compare-table-wrap { margin-bottom: 14px; }
+    #compare-modal-body .compare-table { font-size: 13px; }
+    #compare-modal-body .compare-table th, #compare-modal-body .compare-table td { padding: 9px 16px; }
+    #compare-modal-body .compare-table td:first-child, #compare-modal-body .compare-table th:first-child { font-size: 11px; }
+    #compare-modal-body .compare-clear { width: auto; padding: 9px 18px; }
+
+    /* ── GEBIET FOKUSSIEREN ── */
+    #fokus-wrap { margin-bottom: 18px; }
+
+    #fokus-reset {
+      width: 100%;
+      padding: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    #fokus-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── MAP ── */
+    #map-wrap { flex: 1; position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    .maplibregl-ctrl-attrib { font-size: 10px; }
+
+    /* ── DARSTELLUNG (schwebendes Menü) ── */
+    #darstellung-control {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 5;
+    }
+
+    #btn-darstellung-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #btn-darstellung-toggle:hover { background: var(--hover); }
+    #btn-darstellung-toggle.active { color: var(--accent); border-color: var(--accent); }
+
+    #darstellung-panel {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      width: 260px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+      padding: 16px;
+    }
+
+    #darstellung-panel.hidden { display: none; }
+    #darstellung-panel select { margin-bottom: 4px; }
+
+    /* ── LOADING ── */
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: rgba(244,243,240,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-size: 13px; color: var(--muted); }
+
+    /* ── POTENZIALKLASSE BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .badge-hoch { background: #ddf0e0; color: #2a6b3a; }
+    .badge-mittel { background: #fff4d6; color: #7a5500; }
+    .badge-niedrig { background: #fde8e8; color: #8b2020; }
+
+    /* scrollbar */
+    #sidebar-body::-webkit-scrollbar { width: 4px; }
+    #sidebar-body::-webkit-scrollbar-track { background: transparent; }
+    #sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div class="tool-label">Masterthesis · HCU Hamburg</div>
+      <div class="tool-title">SBCS Potenzialanalyse</div>
+      <div class="tool-subtitle">Stationsbasiertes Carsharing · Hamburg</div>
+    </div>
+
+    <div id="sidebar-body">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-fahrzeuge" onclick="setMode('fahrzeuge')">Fahrzeugpotenzial</button>
+        <button class="mode-btn" id="btn-subgruppen" onclick="setMode('subgruppen')">Subgruppen</button>
+      </div>
+
+      <!-- GEBIET FOKUSSIEREN: Zoom auf Bezirk/Stadtteil mit Grenzdarstellung -->
+      <div id="fokus-wrap">
+        <div class="section-label">Gebiet fokussieren</div>
+        <select id="sel-bezirk" onchange="onBezirkChange(this.value)">
+          <option value="">Alle Bezirke</option>
+        </select>
+        <select id="sel-stadtteil" onchange="onStadtteilChange(this.value)">
+          <option value="">Alle Stadtteile</option>
+        </select>
+        <button id="fokus-reset" onclick="resetFokus()">Zurücksetzen</button>
+      </div>
+
+      <!-- FAHRZEUGE MODE -->
+      <div id="panel-fahrzeuge">
+        <div class="section-label">Gewichtungsszenario</div>
+        <select id="sel-gewichtung" onchange="updateMap()">
+          <option value="Gleich">Gleichgewichtung</option>
+          <option value="Verw">Verwaltungsgewichtung</option>
+          <option value="Anbieter">Anbietergewichtung</option>
+          <option value="Gesamt_Workshop">Workshop-Gesamtergebnis</option>
+        </select>
+
+        <div class="section-label">Durchdringungsszenario</div>
+        <select id="sel-durchdringung" onchange="updateMap()">
+          <option value="0">Bestandsoptimierung</option>
+          <option value="1" selected>Szenariostufe 1 (0,5 Fhz/1.000 EW)</option>
+          <option value="2">Szenariostufe 2 (1,0 Fhz/1.000 EW)</option>
+        </select>
+
+        <div id="stat-box">
+          <div class="stat-row">
+            <span class="stat-key">Gebiete mit Potenzial</span>
+            <span class="stat-val" id="stat-count">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">Gesamt Fahrzeuge</span>
+            <span class="stat-val" id="stat-total">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-key">Max. je Gebiet</span>
+            <span class="stat-val" id="stat-max">—</span>
+          </div>
+        </div>
+
+        <div id="legend-wrap">
+          <div class="section-label">Legende</div>
+          <div class="legend-title" id="legend-title">Fahrzeuge je stat. Gebiet</div>
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span id="leg-min">0</span>
+            <span id="leg-max">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBGRUPPEN MODE -->
+      <div id="panel-subgruppen" style="display:none;">
+        <div class="section-label">Subgruppe / Indikator</div>
+        <select id="sel-subgruppe" onchange="updateMap()">
+          <optgroup label="Gesamtpotenziale je Szenario">
+            <option value="Gesamtpotenzial Gleichgewichtung">Gesamtpotenzial – Gleichgewichtung</option>
+            <option value="Potenzial Szenario Verwaltung">Gesamtpotenzial – Verwaltungsgewichtung</option>
+            <option value="Potenzial Szenario Anbieter">Gesamtpotenzial – Anbietergewichtung</option>
+            <option value="Potenzial Szenario Gesamt_Workshop">Gesamtpotenzial – Workshop-Gesamtergebnis</option>
+          </optgroup>
+          <optgroup label="Subgruppen-Potenziale">
+            <option value="Potenzial Lagebedingung">Lagebedingungen – Gesamtpotenzial</option>
+            <option value="Potenzial Soziodemographie">Soziodemographie – Gesamtpotenzial</option>
+            <option value="Potenzial Mobilitätsmerkmale">Mobilitätsmerkmale – Gesamtpotenzial</option>
+            <option value="Sinus_Potenzial">Einstellungsmerkmale (Sinus) – Potenzial ⚠️</option>
+          </optgroup>
+          <optgroup label="Lagebedingungen – Einzelindikatoren">
+            <option value="Lage_Qualität_ÖV">ÖV-Qualität</option>
+            <option value="Lage_Qualität_Radinfra">Radinfrastruktur</option>
+            <option value="Lage_Bevölkerungsdichte">Bevölkerungsdichte</option>
+            <option value="Lage_Nahversorgungslage">Nahversorgung</option>
+            <option value="Lage_Parkdruck">Parkdruck</option>
+            <option value="Lage_Beschäftigte">Beschäftigte</option>
+          </optgroup>
+          <optgroup label="Soziodemographie – Einzelindikatoren">
+            <option value="Sozio_Alter_Sz1">Alter</option>
+            <option value="Sozio_Erwerb_Sz2">Erwerbstätigkeit</option>
+          </optgroup>
+          <optgroup label="Mobilitätsmerkmale – Einzelindikatoren">
+            <option value="Mobi_Wegezwecke">Wegezwecke</option>
+            <option value="Mobi_Umweltverbund">Umweltverbund</option>
+            <option value="Mobi_Pkw_Besitz">Pkw-Besitz</option>
+          </optgroup>
+        </select>
+
+        <div id="legend-wrap-sg">
+          <div class="section-label">Legende</div>
+          <div class="legend-title">Indexwert (normiert)</div>
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span id="leg-sg-min">niedrig</span>
+            <span id="leg-sg-max">hoch</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUSWAHLWERKZEUGE -->
+      <div id="selection-tools">
+        <label class="toggle-check">
+          <input type="checkbox" id="chk-compare" onchange="toggleCompareMode(this.checked)">
+          Vergleichsmodus (mehrere Gebiete anklicken)
+        </label>
+        <label class="toggle-check">
+          <input type="checkbox" id="chk-isolate" onchange="toggleIsolateMode(this.checked)">
+          Nur ausgewählte Gebiete anzeigen
+        </label>
+      </div>
+
+      <!-- INFO PANEL -->
+      <div id="info-panel">
+        <p class="info-placeholder">Gebiet anklicken für Details</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <!-- DARSTELLUNG: schwebendes Menü für Kartenhintergrund / Farbskala / Transparenz -->
+    <div id="darstellung-control">
+      <button id="btn-darstellung-toggle" onclick="toggleDarstellungPanel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        Darstellung
+      </button>
+      <div id="darstellung-panel" class="hidden">
+        <div class="section-label">Kartenhintergrund</div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="btn-basemap-strasse" onclick="setBasemap('strasse')">Straßenkarte</button>
+          <button class="mode-btn" id="btn-basemap-luftbild" onclick="setBasemap('luftbild')">Luftbild</button>
+        </div>
+
+        <div class="section-label">Farbskala</div>
+        <select id="sel-farbskala" onchange="setPalette(this.value)">
+          <option value="violett">Violett</option>
+          <option value="blau">Blau</option>
+          <option value="orange">Orange</option>
+          <option value="gruen">Grün</option>
+        </select>
+
+        <div class="section-label">Transparenz der Einfärbung</div>
+        <div class="opacity-row">
+          <input type="range" id="sel-opacity" min="10" max="100" value="85" oninput="setOpacity(this.value)">
+          <span class="opacity-value" id="opacity-value">85%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Geodaten werden geladen…</div>
+</div>
+
+<!-- VERGLEICH: großes ausklappbares Modal -->
+<div id="compare-modal-backdrop" class="hidden">
+  <div id="compare-modal">
+    <div id="compare-modal-header">
+      <h2>Gebietsvergleich</h2>
+      <button id="compare-modal-close" onclick="closeCompareModal()" title="Schließen">✕</button>
+    </div>
+    <div id="compare-modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+let dataFahrzeuge = null;
+let dataSubgruppen = null;
+let subgruppenIndex = {};  // statgebiet → properties (for cross-lookup)
+let fahrzeugeIndex = {};   // statgebiet → properties (for cross-lookup, z.B. Vergleichstabelle)
+let einwohnerIndex = {};   // statgebiet → EW count
+let dichteIndex = {};      // statgebiet → EW/km² (berechnet aus Polygonfläche)
+let currentMode = 'fahrzeuge';
+let compareMode = false;
+let isolateMode = false;
+let selectedIds = new Set(); // aktuell ausgewählte statgebiet-IDs (Einzel- oder Vergleichsauswahl)
+let currentBasemap = 'strasse';
+let currentPalette = 'violett';
+let currentOpacity = 0.85;
+
+// Sequentielle Farbskalen (hell → dunkel = niedrig → hoch), ColorBrewer-Referenz
+const PALETTES = {
+  violett: ['#f5f4f0', '#ddd4f0', '#b8a8e0', '#8f7bcf', '#6a53ba', '#4a3f8f', '#2d2360'],
+  blau:    ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#3182bd', '#08519c'],
+  orange:  ['#fff7ec', '#fee8c8', '#fdd49e', '#fdbb84', '#fc8d59', '#e34a33', '#b30000'],
+  gruen:   ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#31a354', '#006d2c'],
+};
+
+// Mapping: Gewichtung-Key → Potenzialklasse-Spalte in Subgruppen-GeoJSON
+const GEW_KAT_COL = {
+  'Gleich':         'Potenzialklasse Gleichgewichtung',
+  'Verw':           'Potenzialkategorie Szenario Verwaltung',
+  'Anbieter':       'Potenzialkategorie Szenario Anbieter',
+  'Gesamt_Workshop':'Potenzialkategorie Szenario Gesamt_Workshop',
+};
+
+// Mapping: Stadtteil → Bezirk (offizielle Hamburger Verwaltungsgliederung, 103 Stadtteile / 7 Bezirke)
+const BEZIRK_MAP = {
+  // Hamburg-Mitte
+  'Billbrook': 'Hamburg-Mitte', 'Billstedt': 'Hamburg-Mitte', 'Borgfelde': 'Hamburg-Mitte',
+  'Finkenwerder': 'Hamburg-Mitte', 'HafenCity': 'Hamburg-Mitte', 'Hamburg-Altstadt': 'Hamburg-Mitte',
+  'Hamm': 'Hamburg-Mitte', 'Hammerbrook': 'Hamburg-Mitte', 'Horn': 'Hamburg-Mitte',
+  'Kleiner Grasbrook': 'Hamburg-Mitte', 'Neustadt': 'Hamburg-Mitte', 'Rothenburgsort': 'Hamburg-Mitte',
+  'St.Georg': 'Hamburg-Mitte', 'St.Pauli': 'Hamburg-Mitte', 'Steinwerder': 'Hamburg-Mitte',
+  'Sternschanze': 'Hamburg-Mitte', 'Veddel': 'Hamburg-Mitte', 'Waltershof': 'Hamburg-Mitte',
+  'Wilhelmsburg': 'Hamburg-Mitte',
+  // Altona
+  'Altona-Altstadt': 'Altona', 'Altona-Nord': 'Altona', 'Bahrenfeld': 'Altona',
+  'Blankenese': 'Altona', 'Groß Flottbek': 'Altona', 'Iserbrook': 'Altona',
+  'Lurup': 'Altona', 'Nienstedten': 'Altona', 'Osdorf': 'Altona',
+  'Othmarschen': 'Altona', 'Ottensen': 'Altona', 'Rissen': 'Altona', 'Sülldorf': 'Altona',
+  // Eimsbüttel
+  'Eidelstedt': 'Eimsbüttel', 'Eimsbüttel': 'Eimsbüttel', 'Harvestehude': 'Eimsbüttel',
+  'Hoheluft-West': 'Eimsbüttel', 'Lokstedt': 'Eimsbüttel', 'Niendorf': 'Eimsbüttel',
+  'Rotherbaum': 'Eimsbüttel', 'Schnelsen': 'Eimsbüttel', 'Stellingen': 'Eimsbüttel',
+  // Hamburg-Nord
+  'Alsterdorf': 'Hamburg-Nord', 'Barmbek-Nord': 'Hamburg-Nord', 'Barmbek-Süd': 'Hamburg-Nord',
+  'Dulsberg': 'Hamburg-Nord', 'Eppendorf': 'Hamburg-Nord', 'Fuhlsbüttel': 'Hamburg-Nord',
+  'Groß Borstel': 'Hamburg-Nord', 'Hoheluft-Ost': 'Hamburg-Nord', 'Hohenfelde': 'Hamburg-Nord',
+  'Langenhorn': 'Hamburg-Nord', 'Ohlsdorf': 'Hamburg-Nord', 'Uhlenhorst': 'Hamburg-Nord',
+  'Winterhude': 'Hamburg-Nord',
+  // Wandsbek
+  'Bergstedt': 'Wandsbek', 'Bramfeld': 'Wandsbek', 'Duvenstedt': 'Wandsbek',
+  'Eilbek': 'Wandsbek', 'Farmsen-Berne': 'Wandsbek', 'Hummelsbüttel': 'Wandsbek',
+  'Jenfeld': 'Wandsbek', 'Lemsahl-Mellingstedt': 'Wandsbek', 'Marienthal': 'Wandsbek',
+  'Poppenbüttel': 'Wandsbek', 'Rahlstedt': 'Wandsbek', 'Sasel': 'Wandsbek',
+  'Steilshoop': 'Wandsbek', 'Tonndorf': 'Wandsbek', 'Volksdorf': 'Wandsbek',
+  'Wandsbek': 'Wandsbek', 'Wellingsbüttel': 'Wandsbek', 'Wohldorf-Ohlstedt': 'Wandsbek',
+  // Bergedorf
+  'Allermöhe': 'Bergedorf', 'Altengamme': 'Bergedorf', 'Bergedorf': 'Bergedorf',
+  'Billwerder': 'Bergedorf', 'Curslack': 'Bergedorf', 'Kirchwerder': 'Bergedorf',
+  'Lohbrügge': 'Bergedorf', 'Moorfleet': 'Bergedorf', 'Neuallermöhe': 'Bergedorf',
+  'Neuengamme': 'Bergedorf', 'Ochsenwerder': 'Bergedorf', 'Reitbrook': 'Bergedorf',
+  'Spadenland': 'Bergedorf', 'Tatenberg': 'Bergedorf',
+  // Harburg
+  'Altenwerder': 'Harburg', 'Cranz': 'Harburg', 'Eißendorf': 'Harburg',
+  'Francop': 'Harburg', 'Gut Moor': 'Harburg', 'Harburg': 'Harburg',
+  'Hausbruch': 'Harburg', 'Heimfeld': 'Harburg', 'Langenbek': 'Harburg',
+  'Marmstorf': 'Harburg', 'Moorburg': 'Harburg', 'Neuenfelde': 'Harburg',
+  'Neugraben-Fischbek': 'Harburg', 'Neuland': 'Harburg', 'Rönneburg': 'Harburg',
+  'Sinstorf': 'Harburg', 'Wilstorf': 'Harburg',
+};
+
+function parseDE(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const s = v.toString().replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// ── MAP INIT ──────────────────────────────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'map',
+  style: {
+    version: 8,
+    sources: {
+      'osm': {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors'
+      },
+      'satellite': {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256,
+        attribution: 'Imagery © Esri, Maxar, Earthstar Geographics'
+      }
+    },
+    layers: [
+      { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.6 } },
+      { id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 }, layout: { visibility: 'none' } }
+    ]
+  },
+  center: [10.0, 53.55],
+  zoom: 10,
+  minZoom: 8,
+  maxZoom: 15
+});
+
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
+
+// ── LOAD DATA ─────────────────────────────────────────────────────────────────
+function normalizeProps(data) {
+  data.features.forEach(f => {
+    const p = f.properties;
+    Object.keys(p).forEach(k => {
+      const v = p[k];
+      if (typeof v === 'string' && v !== '') {
+        const n = parseFloat(v.replace(',', '.'));
+        if (!isNaN(n)) p[k] = n;
+      }
+    });
+  });
+}
+
+// ── FLÄCHENBERECHNUNG (für Bevölkerungsdichte) ─────────────────────────────────
+function ringAreaM2(ring, cosLat) {
+  const R = 6371000; // Erdradius in Metern
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [lon1, lat1] = ring[i];
+    const [lon2, lat2] = ring[i + 1];
+    const x1 = lon1 * Math.PI / 180 * R * cosLat;
+    const y1 = lat1 * Math.PI / 180 * R;
+    const x2 = lon2 * Math.PI / 180 * R * cosLat;
+    const y2 = lat2 * Math.PI / 180 * R;
+    area += (x1 * y2 - x2 * y1);
+  }
+  return Math.abs(area / 2);
+}
+
+function polygonAreaKm2(geometry) {
+  if (!geometry) return 0;
+  let polygons;
+  if (geometry.type === 'Polygon') {
+    polygons = [geometry.coordinates];
+  } else if (geometry.type === 'MultiPolygon') {
+    polygons = geometry.coordinates;
+  } else {
+    return 0;
+  }
+  const refLat = polygons[0][0][0][1];
+  const cosLat = Math.cos(refLat * Math.PI / 180);
+
+  let totalM2 = 0;
+  polygons.forEach(polygon => {
+    polygon.forEach((ring, idx) => {
+      const a = ringAreaM2(ring, cosLat);
+      totalM2 += (idx === 0 ? a : -a); // Löcher (innere Ringe) abziehen
+    });
+  });
+  return totalM2 / 1e6; // km²
+}
+
+async function loadData() {
+  try {
+    const [r1, r2, r3] = await Promise.all([
+      fetch('./sbcs_fahrzeuge_szenarien.geojson'),
+      fetch('./sbcs_subgruppen_szenarien.geojson'),
+      fetch('./einwohner.csv')
+    ]);
+    dataFahrzeuge = await r1.json();
+    dataSubgruppen = await r2.json();
+    normalizeProps(dataFahrzeuge);
+    normalizeProps(dataSubgruppen);
+
+    // Build subgruppen/fahrzeuge index for cross-lookup (statgebiet → props)
+    dataSubgruppen.features.forEach(f => {
+      subgruppenIndex[f.properties.statgebiet] = f.properties;
+    });
+    dataFahrzeuge.features.forEach(f => {
+      fahrzeugeIndex[f.properties.statgebiet] = f.properties;
+    });
+
+    // Parse Einwohner CSV
+    const csvText = await r3.text();
+    csvText.split('\n').slice(1).forEach(line => {
+      const parts = line.trim().split(';');
+      if (parts.length >= 3 && parts[0]) {
+        einwohnerIndex[parts[0].trim()] = parseInt(parts[2]) || 0;
+      }
+    });
+
+    // Bevölkerungsdichte (EW/km²) aus Polygonfläche + Einwohnerzahl berechnen
+    dataFahrzeuge.features.forEach(f => {
+      const sg = f.properties.statgebiet;
+      const ew = einwohnerIndex[sg];
+      const areaKm2 = polygonAreaKm2(f.geometry);
+      if (ew !== undefined && areaKm2 > 0) {
+        dichteIndex[sg] = ew / areaKm2;
+      }
+    });
+
+    return true;
+  } catch (e) {
+    document.querySelector('.loading-text').textContent = 'Fehler beim Laden der Daten. Bitte lokalen Server starten.';
+    console.error(e);
+    return false;
+  }
+}
+
+function initSources() {
+  map.addSource('fahrzeuge', { type: 'geojson', data: dataFahrzeuge });
+  map.addSource('subgruppen', { type: 'geojson', data: dataSubgruppen });
+
+  // Fahrzeuge fill layer
+  map.addLayer({
+    id: 'layer-fahrzeuge',
+    type: 'fill',
+    source: 'fahrzeuge',
+    paint: {
+      'fill-color': '#ccc',
+      'fill-opacity': currentOpacity
+    }
+  });
+
+  // Subgruppen fill layer
+  map.addLayer({
+    id: 'layer-subgruppen',
+    type: 'fill',
+    source: 'subgruppen',
+    paint: {
+      'fill-color': '#ccc',
+      'fill-opacity': currentOpacity
+    },
+    layout: { visibility: 'none' }
+  });
+
+  // Outline layer (always on top)
+  map.addLayer({
+    id: 'layer-outline',
+    type: 'line',
+    source: 'fahrzeuge',
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.3, 13, 1.2],
+      'line-opacity': 0.7
+    }
+  });
+
+  // Hover outline
+  map.addLayer({
+    id: 'layer-hover',
+    type: 'line',
+    source: 'fahrzeuge',
+    paint: {
+      'line-color': '#2d2360',
+      'line-width': 2.5
+    },
+    filter: ['==', ['get', 'statgebiet'], '']
+  });
+
+  // Click handlers
+  ['layer-fahrzeuge', 'layer-subgruppen'].forEach(id => {
+    map.on('click', id, onFeatureClick);
+    map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
+  });
+}
+
+// ── UPDATE MAP ────────────────────────────────────────────────────────────────
+function updateMap() {
+  if (!map.getSource('fahrzeuge')) return;
+
+  if (currentMode === 'fahrzeuge') {
+    updateFahrzeugeLayer();
+  } else {
+    updateSubgruppenLayer();
+  }
+}
+
+// Kombiniert einen Basisfilter mit dem "Nur Auswahl anzeigen"-Filter (Isolieren-Modus).
+// Gibt immer ein gültiges Filter-Array zurück (['all'] ohne Bedingungen = immer wahr),
+// da MapLibre in addLayer() kein filter:null akzeptiert.
+function computeFilter(baseFilter) {
+  if (isolateMode && selectedIds.size > 0) {
+    const idsFilter = ['in', ['get', 'statgebiet'], ['literal', [...selectedIds]]];
+    return baseFilter ? ['all', baseFilter, idsFilter] : idsFilter;
+  }
+  return baseFilter || ['all'];
+}
+
+function updateFahrzeugeLayer() {
+  const gew = document.getElementById('sel-gewichtung').value;
+  const durch = document.getElementById('sel-durchdringung').value;
+  const col = `${gew}_${durch}`;
+
+  // Collect values
+  const vals = dataFahrzeuge.features
+    .map(f => parseDE(f.properties[col]))
+    .filter(v => v !== null && v > 0);
+
+  const total = vals.reduce((a, b) => a + b, 0);
+  const maxVal = vals.length ? Math.max(...vals) : 0;
+
+  // Update stats
+  document.getElementById('stat-count').textContent = vals.length;
+  document.getElementById('stat-total').textContent = Math.round(total);
+  document.getElementById('stat-max').textContent = maxVal;
+  document.getElementById('leg-max').textContent = maxVal;
+
+  // Color steps for integer values 0-maxVal
+  const colorExpr = buildColorExpr(col, 0, maxVal, true);
+  map.setPaintProperty('layer-fahrzeuge', 'fill-color', colorExpr);
+  map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', currentOpacity);
+  map.setFilter('layer-fahrzeuge', computeFilter(null));
+  map.setLayoutProperty('layer-fahrzeuge', 'visibility', 'visible');
+  map.setLayoutProperty('layer-subgruppen', 'visibility', 'none');
+  updateLegendGradient();
+
+  // Swap outline source
+  map.removeLayer('layer-outline');
+  map.addLayer({
+    id: 'layer-outline',
+    type: 'line',
+    source: 'fahrzeuge',
+    filter: computeFilter(null),
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.3, 13, 1.2],
+      'line-opacity': 0.7
+    }
+  });
+
+  if (compareMode) renderSelectionPanel();
+}
+
+function updateSubgruppenLayer() {
+  const col = document.getElementById('sel-subgruppe').value;
+
+  // Fixed 1–2 scale (normalized index); 0 = kein Potenzial → via filter ausblenden
+  document.getElementById('leg-sg-min').textContent = '1,00';
+  document.getElementById('leg-sg-max').textContent = '2,00';
+
+  // Filter: nur Features mit Wert > 0 anzeigen (+ ggf. Isolieren-Filter)
+  const subgruppenBaseFilter = ['>', ['coalesce', ['to-number', ['get', col]], 0], 0];
+  map.setFilter('layer-subgruppen', computeFilter(subgruppenBaseFilter));
+
+  const colors = PALETTES[currentPalette];
+  const colorExpr = ['interpolate', ['linear'], ['coalesce', ['to-number', ['get', col]], 1]];
+  for (let i = 0; i < colors.length; i++) {
+    colorExpr.push(1 + i / (colors.length - 1));
+    colorExpr.push(colors[i]);
+  }
+
+  map.setPaintProperty('layer-subgruppen', 'fill-color', colorExpr);
+  map.setPaintProperty('layer-subgruppen', 'fill-opacity', currentOpacity);
+  map.setLayoutProperty('layer-subgruppen', 'visibility', 'visible');
+  map.setLayoutProperty('layer-fahrzeuge', 'visibility', 'none');
+  updateLegendGradient();
+
+  // Swap outline source to subgruppen
+  if (map.getLayer('layer-outline')) map.removeLayer('layer-outline');
+  map.addLayer({
+    id: 'layer-outline',
+    type: 'line',
+    source: 'subgruppen',
+    filter: computeFilter(null),
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.3, 13, 1.2],
+      'line-opacity': 0.7
+    }
+  });
+
+  if (compareMode) renderSelectionPanel();
+}
+
+function buildColorExpr(col, minVal, maxVal, parseGerman) {
+  const colors = PALETTES[currentPalette];
+  if (maxVal === 0) {
+    return ['case', ['==', ['get', col], 0], colors[0], colors[0]];
+  }
+
+  // Build interpolate expression
+  // For German decimals, we need to handle string values
+  const range = maxVal - minVal || 1;
+  const steps = colors.length - 1;
+  const expr = ['interpolate', ['linear'],
+    ['coalesce', ['to-number', ['get', col]], minVal]
+  ];
+
+  for (let i = 0; i <= steps; i++) {
+    const stop = minVal + (range * i / steps);
+    expr.push(stop);
+    expr.push(colors[i]);
+  }
+
+  return expr;
+}
+
+// ── CLICK HANDLER ─────────────────────────────────────────────────────────────
+function onFeatureClick(e) {
+  const props = e.features[0].properties;
+  const id = props.statgebiet || props.Statgebiet_2;
+
+  if (compareMode) {
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+    updateHoverHighlight();
+    renderSelectionPanel();
+    if (isolateMode) updateMap();
+    return;
+  }
+
+  selectedIds = new Set([id]);
+  updateHoverHighlight();
+  renderSingleInfoPanel(props, id);
+  if (isolateMode) updateMap();
+}
+
+function updateHoverHighlight() {
+  if (!map.getLayer('layer-hover')) return;
+  const ids = [...selectedIds];
+  map.setFilter('layer-hover', ids.length
+    ? ['in', ['get', 'statgebiet'], ['literal', ids]]
+    : ['==', ['get', 'statgebiet'], '']);
+}
+
+function renderSingleInfoPanel(props, id) {
+  const panel = document.getElementById('info-panel');
+
+  const sg = props.Stadtteil || props.Name || '—';
+  const bezirk = BEZIRK_MAP[sg] || null;
+
+  let html = `
+    <div class="info-name">Statistisches Gebiet ${id}</div>
+    <div class="info-id">${sg}${bezirk ? ' · ' + bezirk : ''}</div>
+  `;
+
+  if (currentMode === 'fahrzeuge') {
+    const gew = document.getElementById('sel-gewichtung').value;
+    const durch = document.getElementById('sel-durchdringung').value;
+    const col = `${gew}_${durch}`;
+    const val = parseDE(props[col]);
+
+    // Look up Potenzialkategorie from subgruppen data via statgebiet
+    const sgProps = subgruppenIndex[id] || {};
+    const katCol = GEW_KAT_COL[gew];
+    const kategorie = katCol ? (sgProps[katCol] || null) : null;
+
+    const ew = einwohnerIndex[id] !== undefined ? einwohnerIndex[id].toLocaleString('de-DE') : '—';
+    const dichte = dichteIndex[id] !== undefined
+      ? Math.round(dichteIndex[id]).toLocaleString('de-DE') + ' EW/km²'
+      : '—';
+
+    html += `<div class="info-grid">
+      <div class="info-item">
+        <div class="info-item-label">Fahrzeugpotenzial</div>
+        <div class="info-item-value">${val !== null ? Math.round(val) : '—'} Fhz.</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">Potenzialkategorie</div>
+        <div class="info-item-value">${kategorie ? badgeHtml(kategorie) : '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">Einwohner</div>
+        <div class="info-item-value">${ew}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">Bevölkerungsdichte</div>
+        <div class="info-item-value">${dichte}</div>
+      </div>
+    </div>`;
+  } else {
+    const col = document.getElementById('sel-subgruppe').value;
+    const val = parseDE(props[col]);
+
+    // Try to get Potenzialkategorie if available
+    const katCol = getKatColumn(col);
+    const kat = katCol ? props[katCol] : null;
+
+    html += `<div class="info-grid">
+      <div class="info-item">
+        <div class="info-item-label">Indexwert</div>
+        <div class="info-item-value">${val !== null ? val.toFixed(3).replace('.', ',') : '—'}</div>
+      </div>
+      ${kat ? `<div class="info-item">
+        <div class="info-item-label">Kategorie</div>
+        <div class="info-item-value">${badgeHtml(kat)}</div>
+      </div>` : ''}
+    </div>`;
+  }
+
+  panel.innerHTML = html;
+}
+
+// ── VERGLEICHSMODUS ───────────────────────────────────────────────────────────
+function toggleCompareMode(checked) {
+  compareMode = checked;
+  selectedIds.clear();
+  updateHoverHighlight();
+  if (compareMode) {
+    renderSelectionPanel();
+  } else {
+    document.getElementById('info-panel').innerHTML = '<p class="info-placeholder">Gebiet anklicken für Details</p>';
+    closeCompareModal();
+  }
+  if (isolateMode) updateMap();
+}
+
+function toggleIsolateMode(checked) {
+  isolateMode = checked;
+  updateMap();
+}
+
+function removeFromCompare(id) {
+  selectedIds.delete(id);
+  updateHoverHighlight();
+  renderSelectionPanel();
+  if (isolateMode) updateMap();
+}
+
+function clearCompareSelection() {
+  selectedIds.clear();
+  updateHoverHighlight();
+  renderSelectionPanel();
+  if (isolateMode) updateMap();
+}
+
+// Ganzheitlicher Vergleich: zeigt Basisdaten, Fahrzeugpotenzial, alle Gesamtpotenziale
+// und alle Subgruppen-Indikatoren gemeinsam an - unabhängig vom aktuellen Modus.
+// Kompakte Sidebar-Ansicht bei aktivem Vergleichsmodus: Chips + Button zum Öffnen der großen Ansicht
+function renderSelectionPanel() {
+  const panel = document.getElementById('info-panel');
+  const ids = [...selectedIds];
+
+  if (ids.length === 0) {
+    panel.innerHTML = '<p class="info-placeholder">Gebiete anklicken zum Vergleichen</p>';
+    closeCompareModal();
+    return;
+  }
+
+  let html = '<div class="compare-chips">';
+  ids.forEach(id => {
+    const stadtteil = (fahrzeugeIndex[id] || subgruppenIndex[id] || {}).Stadtteil || '';
+    html += `<span class="compare-chip"><strong>${id}</strong>${stadtteil ? ' · ' + stadtteil : ''}<button onclick="removeFromCompare(${id})" title="Entfernen">×</button></span>`;
+  });
+  html += '</div>';
+  html += `<button class="compare-open-btn" onclick="openCompareModal()">Vergleich in großer Ansicht öffnen (${ids.length})</button>`;
+  html += `<button class="compare-clear" onclick="clearCompareSelection()">Auswahl leeren</button>`;
+  panel.innerHTML = html;
+
+  if (compareModalOpen) renderCompareModalBody();
+}
+
+// Baut die vollständige, gruppierte Vergleichstabelle als HTML-String (genutzt im Modal)
+function buildCompareTableHTML(ids) {
+  const gew = document.getElementById('sel-gewichtung').value;
+  const durch = document.getElementById('sel-durchdringung').value;
+  const fzCol = `${gew}_${durch}`;
+  const fzKatCol = GEW_KAT_COL[gew];
+
+  const gewLabel = { Gleich: 'Gleichgewichtung', Verw: 'Verwaltungsgewichtung', Anbieter: 'Anbietergewichtung', Gesamt_Workshop: 'Workshop-Gesamtergebnis' }[gew];
+  const durchLabel = { '0': 'Bestandsoptimierung', '1': 'Stufe 1 · 0,5 Fhz/1.000 EW', '2': 'Stufe 2 · 1,0 Fhz/1.000 EW' }[durch];
+
+  const idx = v => v !== null && v !== undefined ? Number(v).toFixed(3).replace('.', ',') : '—';
+  const sub = id => subgruppenIndex[id] || {};
+  const fzp = id => fahrzeugeIndex[id] || {};
+
+  const headerStadtteile = ids.map(id => fzp(id).Stadtteil || sub(id).Stadtteil || '');
+
+  const groups = [
+    { title: 'Basisdaten', rows: [
+      { label: 'Statistisches Gebiet', values: ids.map(id => String(id)) },
+      { label: 'Stadtteil', values: ids.map(id => fzp(id).Stadtteil || '—') },
+      { label: 'Bezirk', values: ids.map(id => BEZIRK_MAP[fzp(id).Stadtteil] || '—') },
+      { label: 'Einwohner', values: ids.map(id => einwohnerIndex[id] !== undefined ? einwohnerIndex[id].toLocaleString('de-DE') : '—') },
+      { label: 'Bevölkerungsdichte', values: ids.map(id => dichteIndex[id] !== undefined ? Math.round(dichteIndex[id]).toLocaleString('de-DE') + ' EW/km²' : '—') },
+    ] },
+    { title: `Fahrzeugpotenzial (${gewLabel} · ${durchLabel})`, rows: [
+      { label: 'Fahrzeugpotenzial', values: ids.map(id => {
+        const val = parseDE(fzp(id)[fzCol]);
+        return val !== null ? Math.round(val) + ' Fhz.' : '—';
+      }) },
+      { label: 'Potenzialkategorie', values: ids.map(id => {
+        const kat = fzKatCol ? sub(id)[fzKatCol] : null;
+        return kat ? badgeHtml(kat) : '—';
+      }), subrow: true },
+    ] },
+    { title: 'Gesamtpotenziale je Gewichtungsszenario', rows: [
+      { label: 'Gleichgewichtung', values: ids.map(id => idx(sub(id)['Gesamtpotenzial Gleichgewichtung'])) },
+      { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialklasse Gleichgewichtung']; return k ? badgeHtml(k) : '—'; }), subrow: true },
+      { label: 'Verwaltungsgewichtung', values: ids.map(id => idx(sub(id)['Potenzial Szenario Verwaltung'])) },
+      { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialkategorie Szenario Verwaltung']; return k ? badgeHtml(k) : '—'; }), subrow: true },
+      { label: 'Anbietergewichtung', values: ids.map(id => idx(sub(id)['Potenzial Szenario Anbieter'])) },
+      { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialkategorie Szenario Anbieter']; return k ? badgeHtml(k) : '—'; }), subrow: true },
+      { label: 'Workshop-Gesamtergebnis', values: ids.map(id => idx(sub(id)['Potenzial Szenario Gesamt_Workshop'])) },
+      { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialkategorie Szenario Gesamt_Workshop']; return k ? badgeHtml(k) : '—'; }), subrow: true },
+    ] },
+    { title: 'Subgruppen-Potenziale', rows: [
+      { label: 'Lagebedingungen', values: ids.map(id => idx(sub(id)['Potenzial Lagebedingung'])) },
+      { label: 'Soziodemographie', values: ids.map(id => idx(sub(id)['Potenzial Soziodemographie'])) },
+      { label: 'Mobilitätsmerkmale', values: ids.map(id => idx(sub(id)['Potenzial Mobilitätsmerkmale'])) },
+      { label: 'Einstellungsmerkmale (Sinus)', values: ids.map(id => idx(sub(id).Sinus_Potenzial)) },
+    ] },
+    { title: 'Lagebedingungen – Einzelindikatoren', rows: [
+      { label: 'ÖV-Qualität', values: ids.map(id => idx(sub(id)['Lage_Qualität_ÖV'])) },
+      { label: 'Radinfrastruktur', values: ids.map(id => idx(sub(id)['Lage_Qualität_Radinfra'])) },
+      { label: 'Bevölkerungsdichte (Index)', values: ids.map(id => idx(sub(id)['Lage_Bevölkerungsdichte'])) },
+      { label: 'Nahversorgung', values: ids.map(id => idx(sub(id)['Lage_Nahversorgungslage'])) },
+      { label: 'Parkdruck', values: ids.map(id => idx(sub(id)['Lage_Parkdruck'])) },
+      { label: 'Beschäftigte', values: ids.map(id => idx(sub(id)['Lage_Beschäftigte'])) },
+    ] },
+    { title: 'Soziodemographie – Einzelindikatoren', rows: [
+      { label: 'Alter', values: ids.map(id => idx(sub(id).Sozio_Alter_Sz1)) },
+      { label: 'Erwerbstätigkeit', values: ids.map(id => idx(sub(id).Sozio_Erwerb_Sz2)) },
+    ] },
+    { title: 'Mobilitätsmerkmale – Einzelindikatoren', rows: [
+      { label: 'Wegezwecke', values: ids.map(id => idx(sub(id).Mobi_Wegezwecke)) },
+      { label: 'Umweltverbund', values: ids.map(id => idx(sub(id).Mobi_Umweltverbund)) },
+      { label: 'Pkw-Besitz', values: ids.map(id => idx(sub(id).Mobi_Pkw_Besitz)) },
+    ] },
+  ];
+
+  let html = '<div class="compare-table-wrap"><table class="compare-table"><thead><tr><th></th>';
+  ids.forEach((id, i) => {
+    html += `<th><div class="compare-th-id">${id}</div>${headerStadtteile[i] ? `<div class="compare-th-name">${headerStadtteile[i]}</div>` : ''}<button class="compare-remove" onclick="removeFromCompare(${id})" title="Entfernen">×</button></th>`;
+  });
+  html += '</tr></thead><tbody>';
+  groups.forEach(group => {
+    html += `<tr class="compare-section-row"><td colspan="${ids.length + 1}">${group.title}</td></tr>`;
+    group.rows.forEach(r => {
+      html += `<tr${r.subrow ? ' class="compare-subrow"' : ''}><td>${r.label}</td>`;
+      r.values.forEach(v => { html += `<td>${v}</td>`; });
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table></div>';
+  html += `<button class="compare-clear" onclick="clearCompareSelection()">Auswahl leeren (${ids.length})</button>`;
+
+  return html;
+}
+
+// ── VERGLEICH: großes Modal ─────────────────────────────────────────────────────
+let compareModalOpen = false;
+
+function openCompareModal() {
+  if (selectedIds.size === 0) return;
+  compareModalOpen = true;
+  renderCompareModalBody();
+  document.getElementById('compare-modal-backdrop').classList.remove('hidden');
+}
+
+function closeCompareModal() {
+  compareModalOpen = false;
+  document.getElementById('compare-modal-backdrop').classList.add('hidden');
+}
+
+function renderCompareModalBody() {
+  document.getElementById('compare-modal-body').innerHTML = buildCompareTableHTML([...selectedIds]);
+}
+
+document.getElementById('compare-modal-backdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'compare-modal-backdrop') closeCompareModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && compareModalOpen) closeCompareModal();
+});
+
+function getKategorie(props) {
+  // Try all Potenzialkategorie columns
+  for (const key of Object.keys(props)) {
+    if (key.toLowerCase().includes('potenzialklasse') || key.toLowerCase().includes('potenzialkategorie')) {
+      if (props[key] && props[key] !== 'null') return props[key];
+    }
+  }
+  return null;
+}
+
+function getKatColumn(col) {
+  const map = {
+    'Gesamtpotenzial Gleichgewichtung': 'Potenzialklasse Gleichgewichtung',
+    'Potenzial Szenario Verwaltung': 'Potenzialkategorie Szenario Verwaltung',
+    'Potenzial Szenario Anbieter': 'Potenzialkategorie Szenario Anbieter',
+    'Potenzial Szenario Gesamt_Workshop': 'Potenzialkategorie Szenario Gesamt_Workshop',
+  };
+  return map[col] || null;
+}
+
+function badgeHtml(kat) {
+  const cls = kat === 'Hoch' ? 'hoch' : kat === 'Mittel' ? 'mittel' : 'niedrig';
+  return `<span class="badge badge-${cls}">${kat}</span>`;
+}
+
+// ── MODE SWITCH ───────────────────────────────────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('panel-fahrzeuge').style.display = mode === 'fahrzeuge' ? '' : 'none';
+  document.getElementById('panel-subgruppen').style.display = mode === 'subgruppen' ? '' : 'none';
+  document.getElementById('btn-fahrzeuge').classList.toggle('active', mode === 'fahrzeuge');
+  document.getElementById('btn-subgruppen').classList.toggle('active', mode === 'subgruppen');
+
+  if (compareMode) {
+    // Auswahl bleibt beim Moduswechsel erhalten, Tabelle wird mit neuen Kennzahlen neu aufgebaut
+    renderSelectionPanel();
+  } else if (isolateMode && selectedIds.size > 0) {
+    // Auswahl bleibt erhalten, damit "Nur Auswahl anzeigen" beim Moduswechsel nicht ins Leere läuft
+    const id = [...selectedIds][0];
+    const props = currentMode === 'fahrzeuge' ? fahrzeugeIndex[id] : subgruppenIndex[id];
+    if (props) renderSingleInfoPanel(props, id);
+    updateHoverHighlight();
+  } else {
+    selectedIds.clear();
+    document.getElementById('info-panel').innerHTML = '<p class="info-placeholder">Gebiet anklicken für Details</p>';
+    updateHoverHighlight();
+  }
+  updateMap();
+}
+
+// ── GEBIET FOKUSSIEREN: Zoom auf Bezirk/Stadtteil mit Grenzdarstellung ─────────
+function populateFokusSelects() {
+  const bezirke = [...new Set(Object.values(BEZIRK_MAP))].sort();
+  const selB = document.getElementById('sel-bezirk');
+  bezirke.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = b;
+    selB.appendChild(opt);
+  });
+  populateStadtteilOptions(null);
+}
+
+function populateStadtteilOptions(filterBezirk) {
+  const selS = document.getElementById('sel-stadtteil');
+  const current = selS.value;
+  selS.innerHTML = '<option value="">Alle Stadtteile</option>';
+  Object.keys(BEZIRK_MAP)
+    .filter(st => !filterBezirk || BEZIRK_MAP[st] === filterBezirk)
+    .sort()
+    .forEach(st => {
+      const opt = document.createElement('option');
+      opt.value = st;
+      opt.textContent = st;
+      selS.appendChild(opt);
+    });
+  if ([...selS.options].some(o => o.value === current)) selS.value = current;
+}
+
+function onBezirkChange(bezirk) {
+  document.getElementById('sel-stadtteil').value = '';
+  populateStadtteilOptions(bezirk || null);
+  if (bezirk) {
+    focusOnStadtteile(Object.keys(BEZIRK_MAP).filter(st => BEZIRK_MAP[st] === bezirk));
+  } else {
+    resetFokus();
+  }
+}
+
+function onStadtteilChange(stadtteil) {
+  if (stadtteil) {
+    document.getElementById('sel-bezirk').value = BEZIRK_MAP[stadtteil] || '';
+    focusOnStadtteile([stadtteil]);
+  } else {
+    const bezirk = document.getElementById('sel-bezirk').value;
+    if (bezirk) focusOnStadtteile(Object.keys(BEZIRK_MAP).filter(st => BEZIRK_MAP[st] === bezirk));
+    else resetFokus();
+  }
+}
+
+function focusOnStadtteile(stadtteilListe) {
+  const stSet = new Set(stadtteilListe);
+  const features = dataFahrzeuge.features.filter(f => stSet.has(f.properties.Stadtteil));
+  if (!features.length) return;
+
+  // Gebietsgrenzen zu einer Umrisslinie verschmelzen (Turf.js)
+  let boundaryGeoJSON;
+  try {
+    const turfFeatures = features.map(f => turf.polygon(f.geometry.coordinates));
+    const dissolved = turf.dissolve(turf.featureCollection(turfFeatures));
+    boundaryGeoJSON = { type: 'FeatureCollection', features: dissolved.features };
+  } catch (err) {
+    console.error('Dissolve fehlgeschlagen, zeige Einzelgrenzen', err);
+    boundaryGeoJSON = { type: 'FeatureCollection', features };
+  }
+
+  if (map.getSource('boundary-highlight')) {
+    map.getSource('boundary-highlight').setData(boundaryGeoJSON);
+  } else {
+    map.addSource('boundary-highlight', { type: 'geojson', data: boundaryGeoJSON });
+    map.addLayer({
+      id: 'layer-boundary-highlight',
+      type: 'line',
+      source: 'boundary-highlight',
+      paint: { 'line-color': '#e34948', 'line-width': 3, 'line-opacity': 0.9 }
+    });
+  }
+  map.setLayoutProperty('layer-boundary-highlight', 'visibility', 'visible');
+
+  const bbox = turf.bbox(boundaryGeoJSON);
+  map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 600 });
+}
+
+function resetFokus() {
+  document.getElementById('sel-bezirk').value = '';
+  document.getElementById('sel-stadtteil').value = '';
+  populateStadtteilOptions(null);
+  if (map.getLayer('layer-boundary-highlight')) {
+    map.setLayoutProperty('layer-boundary-highlight', 'visibility', 'none');
+  }
+  map.flyTo({ center: [10.0, 53.55], zoom: 10, duration: 600 });
+}
+
+// ── DARSTELLUNG: Kartenhintergrund / Farbskala / Transparenz ───────────────────
+function toggleDarstellungPanel() {
+  const panel = document.getElementById('darstellung-panel');
+  const btn = document.getElementById('btn-darstellung-toggle');
+  const willOpen = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !willOpen);
+  btn.classList.toggle('active', willOpen);
+}
+
+document.addEventListener('click', (e) => {
+  const control = document.getElementById('darstellung-control');
+  const panel = document.getElementById('darstellung-panel');
+  if (!panel.classList.contains('hidden') && !control.contains(e.target)) {
+    panel.classList.add('hidden');
+    document.getElementById('btn-darstellung-toggle').classList.remove('active');
+  }
+});
+
+function setBasemap(mode) {
+  currentBasemap = mode;
+  map.setLayoutProperty('osm', 'visibility', mode === 'strasse' ? 'visible' : 'none');
+  map.setLayoutProperty('satellite', 'visibility', mode === 'luftbild' ? 'visible' : 'none');
+  document.getElementById('btn-basemap-strasse').classList.toggle('active', mode === 'strasse');
+  document.getElementById('btn-basemap-luftbild').classList.toggle('active', mode === 'luftbild');
+}
+
+function setPalette(palette) {
+  currentPalette = palette;
+  updateMap();
+}
+
+function setOpacity(value) {
+  currentOpacity = value / 100;
+  document.getElementById('opacity-value').textContent = `${value}%`;
+  if (map.getLayer('layer-fahrzeuge')) map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', currentOpacity);
+  if (map.getLayer('layer-subgruppen')) map.setPaintProperty('layer-subgruppen', 'fill-opacity', currentOpacity);
+}
+
+function updateLegendGradient() {
+  const gradient = `linear-gradient(to right, ${PALETTES[currentPalette].join(', ')})`;
+  document.querySelectorAll('.legend-bar').forEach(el => { el.style.background = gradient; });
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+map.on('load', async () => {
+  const ok = await loadData();
+  if (ok) {
+    initSources();
+    updateMap();
+    populateFokusSelects();
+    document.getElementById('loading').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
