@@ -73,6 +73,19 @@
       margin-top: 4px;
     }
 
+    .thesis-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .thesis-link:hover { text-decoration: underline; }
+
     #sidebar-body { flex: 1; overflow-y: auto; padding: 16px; }
 
     /* ── MODE TOGGLE ── */
@@ -159,6 +172,142 @@
       color: var(--muted);
       min-width: 34px;
       text-align: right;
+    }
+
+    /* ── EIGENE GEWICHTUNG (Subgruppen) ── */
+    #custom-weight-panel {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px 14px 10px;
+      margin-bottom: 10px;
+    }
+
+    #custom-weight-panel .section-label-row { margin-top: 0; margin-bottom: 10px; }
+
+    .weight-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .weight-row label {
+      font-size: 11px;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .weight-input {
+      width: 48px;
+      padding: 5px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .weight-input:focus { outline: none; border-color: var(--accent); }
+
+    .weight-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 32px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .weight-hint {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+
+    /* ── INFO-BUTTONS & POPOVER ── */
+    .section-label-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    .section-label-row:first-child { margin-top: 0; }
+    .section-label-row .section-label { margin: 0; }
+
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--muted);
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .info-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .info-item-label-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .info-item-label-row .info-item-label { margin-bottom: 0; }
+
+    #info-popover {
+      position: fixed;
+      width: 280px;
+      max-height: 60vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+      padding: 14px 16px;
+      z-index: 300;
+    }
+
+    #info-popover.hidden { display: none; }
+
+    #info-popover-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    #info-popover-body {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    #info-popover-body p { margin-bottom: 8px; }
+    #info-popover-body p:last-child { margin-bottom: 0; }
+    #info-popover-body ul { margin: 0 0 8px 16px; }
+    #info-popover-body li { margin-bottom: 3px; }
+    #info-popover-body .info-source {
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 8px;
     }
 
     /* ── STAT BOX ── */
@@ -622,6 +771,8 @@
       <div class="tool-label">Masterthesis · HCU Hamburg</div>
       <div class="tool-title">SBCS Potenzialanalyse</div>
       <div class="tool-subtitle">Stationsbasiertes Carsharing · Hamburg</div>
+      <!-- TODO: href austauschen, sobald die Masterarbeit veröffentlicht ist -->
+      <a class="thesis-link" href="#TODO-thesis-link" target="_blank" rel="noopener">📄 Zur Masterarbeit</a>
     </div>
 
     <div id="sidebar-body">
@@ -644,7 +795,10 @@
 
       <!-- FAHRZEUGE MODE -->
       <div id="panel-fahrzeuge">
-        <div class="section-label">Gewichtungsszenario</div>
+        <div class="section-label-row">
+          <div class="section-label">Gewichtungsszenario</div>
+          <button class="info-btn" onclick="toggleInfoPopover('gewichtungsszenario', this)" title="Was ist das?">i</button>
+        </div>
         <select id="sel-gewichtung" onchange="updateMap()">
           <option value="Gleich">Gleichgewichtung</option>
           <option value="Verw">Verwaltungsgewichtung</option>
@@ -652,7 +806,10 @@
           <option value="Gesamt_Workshop">Workshop-Gesamtergebnis</option>
         </select>
 
-        <div class="section-label">Durchdringungsszenario</div>
+        <div class="section-label-row">
+          <div class="section-label">Durchdringungsszenario</div>
+          <button class="info-btn" onclick="toggleInfoPopover('durchdringungsszenario', this)" title="Was ist das?">i</button>
+        </div>
         <select id="sel-durchdringung" onchange="updateMap()">
           <option value="0">Bestandsoptimierung</option>
           <option value="1" selected>Szenariostufe 1 (0,5 Fhz/1.000 EW)</option>
@@ -687,21 +844,25 @@
 
       <!-- SUBGRUPPEN MODE -->
       <div id="panel-subgruppen" style="display:none;">
-        <div class="section-label">Subgruppe / Indikator</div>
-        <select id="sel-subgruppe" onchange="updateMap()">
-          <optgroup label="Gesamtpotenziale je Szenario">
-            <option value="Gesamtpotenzial Gleichgewichtung">Gesamtpotenzial – Gleichgewichtung</option>
-            <option value="Potenzial Szenario Verwaltung">Gesamtpotenzial – Verwaltungsgewichtung</option>
-            <option value="Potenzial Szenario Anbieter">Gesamtpotenzial – Anbietergewichtung</option>
-            <option value="Potenzial Szenario Gesamt_Workshop">Gesamtpotenzial – Workshop-Gesamtergebnis</option>
+        <div class="section-label-row">
+          <div class="section-label">Subgruppe / Indikator</div>
+          <button class="info-btn" onclick="toggleInfoPopover('subgruppenIndikatoren', this)" title="Was ist das?">i</button>
+        </div>
+        <select id="sel-subgruppe" onchange="onSubgruppeChange(this.value)">
+          <optgroup label="Gesamtpotenzial – Gewichtungsszenarien">
+            <option value="Gesamtpotenzial Gleichgewichtung">Gleichgewichtung</option>
+            <option value="Potenzial Szenario Verwaltung">Verwaltungsgewichtung</option>
+            <option value="Potenzial Szenario Anbieter">Anbietergewichtung</option>
+            <option value="Potenzial Szenario Gesamt_Workshop">Workshop-Gesamtergebnis</option>
+            <option value="__custom__">Eigene Gewichtung …</option>
           </optgroup>
-          <optgroup label="Subgruppen-Potenziale">
-            <option value="Potenzial Lagebedingung">Lagebedingungen – Gesamtpotenzial</option>
-            <option value="Potenzial Soziodemographie">Soziodemographie – Gesamtpotenzial</option>
-            <option value="Potenzial Mobilitätsmerkmale">Mobilitätsmerkmale – Gesamtpotenzial</option>
-            <option value="Sinus_Potenzial">Einstellungsmerkmale (Sinus) – Potenzial ⚠️</option>
+          <optgroup label="Subgruppen – Gesamtwert">
+            <option value="Potenzial Lagebedingung">Lagebedingungen</option>
+            <option value="Potenzial Soziodemographie">Soziodemografie</option>
+            <option value="Potenzial Mobilitätsmerkmale">Mobilitätsmerkmale</option>
+            <option value="Sinus_Potenzial">Einstellungsmerkmale</option>
           </optgroup>
-          <optgroup label="Lagebedingungen – Einzelindikatoren">
+          <optgroup label="Lagebedingungen – im Detail">
             <option value="Lage_Qualität_ÖV">ÖV-Qualität</option>
             <option value="Lage_Qualität_Radinfra">Radinfrastruktur</option>
             <option value="Lage_Bevölkerungsdichte">Bevölkerungsdichte</option>
@@ -709,16 +870,45 @@
             <option value="Lage_Parkdruck">Parkdruck</option>
             <option value="Lage_Beschäftigte">Beschäftigte</option>
           </optgroup>
-          <optgroup label="Soziodemographie – Einzelindikatoren">
+          <optgroup label="Soziodemografie – im Detail">
             <option value="Sozio_Alter_Sz1">Alter</option>
             <option value="Sozio_Erwerb_Sz2">Erwerbstätigkeit</option>
           </optgroup>
-          <optgroup label="Mobilitätsmerkmale – Einzelindikatoren">
+          <optgroup label="Mobilitätsmerkmale – im Detail">
             <option value="Mobi_Wegezwecke">Wegezwecke</option>
             <option value="Mobi_Umweltverbund">Umweltverbund</option>
             <option value="Mobi_Pkw_Besitz">Pkw-Besitz</option>
           </optgroup>
         </select>
+
+        <!-- EIGENE GEWICHTUNG: nur sichtbar wenn "__custom__" gewählt ist -->
+        <div id="custom-weight-panel" style="display:none;">
+          <div class="section-label-row">
+            <div class="section-label">Eigene Gewichtung der Subgruppen</div>
+            <button class="info-btn" onclick="toggleInfoPopover('eigeneGewichtung', this)" title="Was ist das?">i</button>
+          </div>
+          <div class="weight-row">
+            <label for="sld-w-lage">Lagebedingungen</label>
+            <input type="number" class="weight-input" id="sld-w-lage" min="0" step="1" value="1" oninput="onCustomWeightChange()">
+            <span class="weight-value" id="val-w-lage">25%</span>
+          </div>
+          <div class="weight-row">
+            <label for="sld-w-sinus">Einstellungsmerkmale</label>
+            <input type="number" class="weight-input" id="sld-w-sinus" min="0" step="1" value="1" oninput="onCustomWeightChange()">
+            <span class="weight-value" id="val-w-sinus">25%</span>
+          </div>
+          <div class="weight-row">
+            <label for="sld-w-sozio">Soziodemografie</label>
+            <input type="number" class="weight-input" id="sld-w-sozio" min="0" step="1" value="1" oninput="onCustomWeightChange()">
+            <span class="weight-value" id="val-w-sozio">25%</span>
+          </div>
+          <div class="weight-row">
+            <label for="sld-w-mobil">Mobilitätsmerkmale</label>
+            <input type="number" class="weight-input" id="sld-w-mobil" min="0" step="1" value="1" oninput="onCustomWeightChange()">
+            <span class="weight-value" id="val-w-mobil">25%</span>
+          </div>
+          <p class="weight-hint">Die Zahlen geben die relative Wichtigkeit an (z.B. 1, 1, 2, 3) und werden automatisch auf 100 % normiert.</p>
+        </div>
 
         <div id="legend-wrap-sg">
           <div class="section-label">Legende</div>
@@ -772,6 +962,7 @@
           <option value="blau">Blau</option>
           <option value="orange">Orange</option>
           <option value="gruen">Grün</option>
+          <option value="rotblau">Rot-Blau (wie in der Thesis)</option>
         </select>
 
         <div class="section-label">Transparenz der Einfärbung</div>
@@ -800,6 +991,12 @@
   </div>
 </div>
 
+<!-- INFO-POPOVER: erklärt Methodik-Elemente auf Grundlage der Masterarbeit -->
+<div id="info-popover" class="hidden">
+  <div id="info-popover-title"></div>
+  <div id="info-popover-body"></div>
+</div>
+
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 let dataFahrzeuge = null;
@@ -815,6 +1012,15 @@ let selectedIds = new Set(); // aktuell ausgewählte statgebiet-IDs (Einzel- ode
 let currentBasemap = 'strasse';
 let currentPalette = 'violett';
 let currentOpacity = 0.85;
+let focusedStadtteile = null; // Array von Stadtteilnamen bei aktivem Fokus, sonst null
+
+// Liefert die fill-opacity-Expression: bei aktivem Fokus werden Gebiete außerhalb
+// der fokussierten Stadtteile stark abgeblendet, der Fokusbereich bleibt voll sichtbar.
+function getOpacityExpr() {
+  if (!focusedStadtteile || !focusedStadtteile.length) return currentOpacity;
+  const dimmed = Math.max(0.05, currentOpacity * 0.12);
+  return ['case', ['in', ['get', 'Stadtteil'], ['literal', focusedStadtteile]], currentOpacity, dimmed];
+}
 
 // Sequentielle Farbskalen (hell → dunkel = niedrig → hoch), ColorBrewer-Referenz
 const PALETTES = {
@@ -822,6 +1028,8 @@ const PALETTES = {
   blau:    ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#3182bd', '#08519c'],
   orange:  ['#fff7ec', '#fee8c8', '#fdd49e', '#fdbb84', '#fc8d59', '#e34a33', '#b30000'],
   gruen:   ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#31a354', '#006d2c'],
+  // Gedeckte Rot-Blau-Skala, angelehnt an die Potenzialkarten der Masterarbeit (durchgehender Verlauf, keine weiße Mitte)
+  rotblau: ['#a9c6d6', '#abafba', '#ac979e', '#ae8082', '#af6966', '#b1514a', '#b23a2e'],
 };
 
 // Mapping: Gewichtung-Key → Potenzialklasse-Spalte in Subgruppen-GeoJSON
@@ -1122,7 +1330,7 @@ function updateFahrzeugeLayer() {
   // Color steps for integer values 0-maxVal
   const colorExpr = buildColorExpr(col, 0, maxVal, true);
   map.setPaintProperty('layer-fahrzeuge', 'fill-color', colorExpr);
-  map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', currentOpacity);
+  map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', getOpacityExpr());
   map.setFilter('layer-fahrzeuge', computeFilter(null));
   map.setLayoutProperty('layer-fahrzeuge', 'visibility', 'visible');
   map.setLayoutProperty('layer-subgruppen', 'visibility', 'none');
@@ -1145,26 +1353,103 @@ function updateFahrzeugeLayer() {
   if (compareMode) renderSelectionPanel();
 }
 
+// ── EIGENE GEWICHTUNG DER SUBGRUPPEN ────────────────────────────────────────────
+function getCustomWeights() {
+  const raw = {
+    lage: +document.getElementById('sld-w-lage').value,
+    sinus: +document.getElementById('sld-w-sinus').value,
+    sozio: +document.getElementById('sld-w-sozio').value,
+    mobil: +document.getElementById('sld-w-mobil').value,
+  };
+  const total = raw.lage + raw.sinus + raw.sozio + raw.mobil || 1;
+  return {
+    lage: raw.lage / total,
+    sinus: raw.sinus / total,
+    sozio: raw.sozio / total,
+    mobil: raw.mobil / total,
+  };
+}
+
+function buildCustomValueExpr() {
+  const w = getCustomWeights();
+  const lageExpr = ['coalesce', ['to-number', ['get', 'Potenzial Lagebedingung']], 0];
+  const sinusExpr = ['coalesce', ['to-number', ['get', 'Sinus_Potenzial']], 0];
+  const sozioExpr = ['coalesce', ['to-number', ['get', 'Potenzial Soziodemographie']], 0];
+  const mobilExpr = ['coalesce', ['to-number', ['get', 'Potenzial Mobilitätsmerkmale']], 0];
+  const weightedSum = ['+',
+    ['*', w.lage, lageExpr],
+    ['*', w.sinus, sinusExpr],
+    ['*', w.sozio, sozioExpr],
+    ['*', w.mobil, mobilExpr],
+  ];
+  // Fehlt für ein Gebiet einer der vier Subgruppenwerte (= 0), wird das Gebiet komplett
+  // ausgeschlossen statt den gewichteten Mittelwert zu verzerren (analog zur Methodik der Arbeit).
+  return ['case',
+    ['any', ['<=', lageExpr, 0], ['<=', sinusExpr, 0], ['<=', sozioExpr, 0], ['<=', mobilExpr, 0]],
+    0,
+    weightedSum
+  ];
+}
+
+// Berechnet den Indexwert der eigenen Gewichtung für ein einzelnes statistisches Gebiet
+function customPotenzial(id) {
+  const p = subgruppenIndex[id] || {};
+  const w = getCustomWeights();
+  const lage = parseDE(p['Potenzial Lagebedingung']) || 0;
+  const sinus = parseDE(p['Sinus_Potenzial']) || 0;
+  const sozio = parseDE(p['Potenzial Soziodemographie']) || 0;
+  const mobil = parseDE(p['Potenzial Mobilitätsmerkmale']) || 0;
+  if (lage <= 0 || sinus <= 0 || sozio <= 0 || mobil <= 0) return 0;
+  return w.lage * lage + w.sinus * sinus + w.sozio * sozio + w.mobil * mobil;
+}
+
+function onCustomWeightChange() {
+  const w = getCustomWeights();
+  document.getElementById('val-w-lage').textContent = Math.round(w.lage * 100) + '%';
+  document.getElementById('val-w-sinus').textContent = Math.round(w.sinus * 100) + '%';
+  document.getElementById('val-w-sozio').textContent = Math.round(w.sozio * 100) + '%';
+  document.getElementById('val-w-mobil').textContent = Math.round(w.mobil * 100) + '%';
+  updateMap();
+}
+
+function onSubgruppeChange(value) {
+  document.getElementById('custom-weight-panel').style.display = value === '__custom__' ? '' : 'none';
+  updateMap();
+}
+
 function updateSubgruppenLayer() {
   const col = document.getElementById('sel-subgruppe').value;
 
-  // Fixed 1–2 scale (normalized index); 0 = kein Potenzial → via filter ausblenden
-  document.getElementById('leg-sg-min').textContent = '1,00';
-  document.getElementById('leg-sg-max').textContent = '2,00';
+  // Bei "Eigene Gewichtung" wird der Indexwert live aus den Reglerwerten berechnet,
+  // sonst wird die vorhandene GeoJSON-Spalte gelesen.
+  const valueExpr = col === '__custom__' ? buildCustomValueExpr() : ['coalesce', ['to-number', ['get', col]], 0];
+
+  // Tatsächlichen Wertebereich (min/max) der aktuellen Auswahl ermitteln, statt der
+  // theoretischen 1–2-Skala. Durch das statistische Verfahren wird der Wert 2 nie
+  // erreicht, daher nutzt die Farbskala so den echten Kontrast zwischen den Gebieten aus.
+  const realVals = col === '__custom__'
+    ? dataSubgruppen.features.map(f => customPotenzial(f.properties.statgebiet)).filter(v => v > 0)
+    : dataSubgruppen.features.map(f => parseDE(f.properties[col])).filter(v => v !== null && v > 0);
+  const minVal = realVals.length ? Math.min(...realVals) : 1;
+  const maxVal = realVals.length ? Math.max(...realVals) : 2;
+  const range = (maxVal - minVal) || 1;
+
+  document.getElementById('leg-sg-min').textContent = minVal.toFixed(2).replace('.', ',');
+  document.getElementById('leg-sg-max').textContent = maxVal.toFixed(2).replace('.', ',');
 
   // Filter: nur Features mit Wert > 0 anzeigen (+ ggf. Isolieren-Filter)
-  const subgruppenBaseFilter = ['>', ['coalesce', ['to-number', ['get', col]], 0], 0];
+  const subgruppenBaseFilter = ['>', valueExpr, 0];
   map.setFilter('layer-subgruppen', computeFilter(subgruppenBaseFilter));
 
   const colors = PALETTES[currentPalette];
-  const colorExpr = ['interpolate', ['linear'], ['coalesce', ['to-number', ['get', col]], 1]];
+  const colorExpr = ['interpolate', ['linear'], valueExpr];
   for (let i = 0; i < colors.length; i++) {
-    colorExpr.push(1 + i / (colors.length - 1));
+    colorExpr.push(minVal + range * i / (colors.length - 1));
     colorExpr.push(colors[i]);
   }
 
   map.setPaintProperty('layer-subgruppen', 'fill-color', colorExpr);
-  map.setPaintProperty('layer-subgruppen', 'fill-opacity', currentOpacity);
+  map.setPaintProperty('layer-subgruppen', 'fill-opacity', getOpacityExpr());
   map.setLayoutProperty('layer-subgruppen', 'visibility', 'visible');
   map.setLayoutProperty('layer-fahrzeuge', 'visibility', 'none');
   updateLegendGradient();
@@ -1266,11 +1551,11 @@ function renderSingleInfoPanel(props, id) {
 
     html += `<div class="info-grid">
       <div class="info-item">
-        <div class="info-item-label">Fahrzeugpotenzial</div>
+        <div class="info-item-label-row"><span class="info-item-label">Fahrzeugpotenzial</span><button class="info-btn" onclick="toggleInfoPopover('fahrzeugpotenzial', this)" title="Was ist das?">i</button></div>
         <div class="info-item-value">${val !== null ? Math.round(val) : '—'} Fhz.</div>
       </div>
       <div class="info-item">
-        <div class="info-item-label">Potenzialkategorie</div>
+        <div class="info-item-label-row"><span class="info-item-label">Potenzialkategorie</span><button class="info-btn" onclick="toggleInfoPopover('potenzialkategorie', this)" title="Was ist das?">i</button></div>
         <div class="info-item-value">${kategorie ? badgeHtml(kategorie) : '—'}</div>
       </div>
       <div class="info-item">
@@ -1278,16 +1563,16 @@ function renderSingleInfoPanel(props, id) {
         <div class="info-item-value">${ew}</div>
       </div>
       <div class="info-item">
-        <div class="info-item-label">Bevölkerungsdichte</div>
+        <div class="info-item-label-row"><span class="info-item-label">Bevölkerungsdichte</span><button class="info-btn" onclick="toggleInfoPopover('bevoelkerungsdichteEcht', this)" title="Was ist das?">i</button></div>
         <div class="info-item-value">${dichte}</div>
       </div>
     </div>`;
   } else {
     const col = document.getElementById('sel-subgruppe').value;
-    const val = parseDE(props[col]);
+    const val = col === '__custom__' ? customPotenzial(id) : parseDE(props[col]);
 
-    // Try to get Potenzialkategorie if available
-    const katCol = getKatColumn(col);
+    // Try to get Potenzialkategorie if available (nicht für die eigene Gewichtung, da hierfür keine offiziellen Schwellenwerte vorliegen)
+    const katCol = col === '__custom__' ? null : getKatColumn(col);
     const kat = katCol ? props[katCol] : null;
 
     html += `<div class="info-grid">
@@ -1407,12 +1692,13 @@ function buildCompareTableHTML(ids) {
       { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialkategorie Szenario Anbieter']; return k ? badgeHtml(k) : '—'; }), subrow: true },
       { label: 'Workshop-Gesamtergebnis', values: ids.map(id => idx(sub(id)['Potenzial Szenario Gesamt_Workshop'])) },
       { label: 'Kategorie', values: ids.map(id => { const k = sub(id)['Potenzialkategorie Szenario Gesamt_Workshop']; return k ? badgeHtml(k) : '—'; }), subrow: true },
+      { label: 'Eigene Gewichtung (aktuelle Regler)', values: ids.map(id => idx(customPotenzial(id))) },
     ] },
     { title: 'Subgruppen-Potenziale', rows: [
       { label: 'Lagebedingungen', values: ids.map(id => idx(sub(id)['Potenzial Lagebedingung'])) },
       { label: 'Soziodemographie', values: ids.map(id => idx(sub(id)['Potenzial Soziodemographie'])) },
       { label: 'Mobilitätsmerkmale', values: ids.map(id => idx(sub(id)['Potenzial Mobilitätsmerkmale'])) },
-      { label: 'Einstellungsmerkmale (Sinus)', values: ids.map(id => idx(sub(id).Sinus_Potenzial)) },
+      { label: 'Einstellungsmerkmale', values: ids.map(id => idx(sub(id).Sinus_Potenzial)) },
     ] },
     { title: 'Lagebedingungen – Einzelindikatoren', rows: [
       { label: 'ÖV-Qualität', values: ids.map(id => idx(sub(id)['Lage_Qualität_ÖV'])) },
@@ -1451,6 +1737,109 @@ function buildCompareTableHTML(ids) {
 
   return html;
 }
+
+// ── INFO-POPOVER: Methodik-Erklärungen auf Grundlage der Masterarbeit ──────────
+// Quelle: Grabowski & Dübbelde, "Geteiltes Auto, gewonnener Raum", HCU Hamburg 2026, Kap. 5.1–5.2
+const INFO_TEXTS = {
+  gewichtungsszenario: {
+    title: 'Gewichtungsszenarien',
+    body: `<p>Die vier Szenarien gewichten die vier Subgruppen (Lagebedingungen, Einstellungsmerkmale, Soziodemografie, Mobilitätsmerkmale) unterschiedlich stark und wurden im Rahmen eines digitalen Workshops mit Praxisakteur:innen entwickelt.</p>
+    <ul>
+      <li><strong>Gleichgewichtung</strong> – alle vier Subgruppen gleich gewichtet (Referenzszenario)</li>
+      <li><strong>Verwaltungsgewichtung</strong> – Lagebedingungen 2,5 · Einstellungsmerkmale 1,5 · Soziodemografie 1 · Mobilitätsmerkmale 2 (Einschätzung von BVM und Hamburger Hochbahn)</li>
+      <li><strong>Anbietergewichtung</strong> – Lagebedingungen 3 · Einstellungsmerkmale 3 · Soziodemografie 2 · Mobilitätsmerkmale 1 (betriebswirtschaftliche Sicht eines SBCS-Anbieters)</li>
+      <li><strong>Workshop-Gesamtergebnis</strong> – Lagebedingungen 16 · Einstellungsmerkmale 11 · Soziodemografie 8 · Mobilitätsmerkmale 11 (gemittelte Präferenzen aller Workshop-Teilnehmenden)</li>
+    </ul>
+    <div class="info-source">Quelle: Masterarbeit, Kap. 5.1.6</div>`
+  },
+  durchdringungsszenario: {
+    title: 'Durchdringungsszenarien',
+    body: `<p>Die drei Stufen beschreiben unterschiedliche Ausbaugrade des SBCS-Angebots:</p>
+    <ul>
+      <li><strong>Bestandsoptimierung</strong> – überträgt das heutige Versorgungsniveau flächendeckend auf alle statistischen Gebiete</li>
+      <li><strong>Szenariostufe 1</strong> – Zielwert 0,5 SBCS-Fahrzeuge je 1.000 Einwohner:innen (orientiert an München/Frankfurt)</li>
+      <li><strong>Szenariostufe 2</strong> – Zielwert 1,0 SBCS-Fahrzeuge je 1.000 Einwohner:innen (orientiert an Hannover/Stuttgart)</li>
+    </ul>
+    <p>Die Fahrzeuganzahl je Gebiet ergibt sich aus der führerscheinbesitzenden Bevölkerung, einer nach Potenzialklasse gestaffelten Erreichungsquote sowie einer angenommenen Nutzer:innenzahl je Fahrzeug. Einzelne Modellkonstanten sind in der öffentlichen Version der Arbeit aus Vertraulichkeitsgründen nicht ausgewiesen.</p>
+    <div class="info-source">Quelle: Masterarbeit, Kap. 5.2.1–5.2.2</div>`
+  },
+  subgruppenIndikatoren: {
+    title: 'Subgruppen und Indikatoren',
+    body: `<p>Der Potenzialindex setzt sich aus vier Subgruppen mit jeweils mehreren Einzelindikatoren zusammen:</p>
+    <ul>
+      <li><strong>Lagebedingungen</strong> – ÖV-Qualität, Radinfrastruktur, Bevölkerungsdichte, Nahversorgung, Parkdruck, Beschäftigte</li>
+      <li><strong>Soziodemografie</strong> – Alter, Erwerbstätigkeit</li>
+      <li><strong>Einstellungsmerkmale</strong> – Sinus-Milieus® je Gebiet, bewertet nach SBCS-Affinität</li>
+      <li><strong>Mobilitätsmerkmale</strong> – Wegezwecke, Aufkommen Umweltverbund, Pkw-Besitz</li>
+    </ul>
+    <p>Alle Indikatoren werden auf eine Skala von 1 (niedrigstes) bis 2 (höchstes Potenzial) normiert und innerhalb jeder Subgruppe individuell gewichtet über das geometrische Mittel zusammengeführt. Fehlt für ein Gebiet ein Indikatorwert, wird die betroffene Subgruppe mit 0 gewertet – daher erscheinen manche Gebiete ohne Potenzial.</p>
+    <div class="info-source">Quelle: Masterarbeit, Kap. 5.1.1–5.1.3</div>`
+  },
+  eigeneGewichtung: {
+    title: 'Eigene Gewichtung',
+    body: `<p>Hier lassen sich die vier Subgruppen-Indizes frei gewichten (z. B. 1, 1, 2, 3) – die Werte werden automatisch auf 100 % normiert.</p>
+    <p>Anders als bei den vier Szenarien aus der Arbeit wird der Gesamtwert hier als einfacher gewichteter <em>Mittelwert</em> berechnet, nicht als geometrisches Mittel. Es wird daher keine Potenzialkategorie (Hoch/Mittel/Niedrig) ausgewiesen, da die dafür verwendeten Klassengrenzen ausschließlich für die vier offiziellen Szenarien der Arbeit gelten. Ebenso lässt sich daraus keine Fahrzeuganzahl ableiten.</p>`
+  },
+  potenzialkategorie: {
+    title: 'Potenzialkategorie',
+    body: `<p>Die Einteilung in Hoch/Mittel/Niedrig erfolgt nach dem <strong>Jenks-Natural-Breaks-Verfahren</strong>, das Klassengrenzen dort setzt, wo natürliche Sprünge in der Datenverteilung liegen.</p>
+    <p>Die Grenzen wurden einmalig auf Basis des Referenzszenarios Gleichgewichtung berechnet und unverändert auf alle vier Gewichtungsszenarien übertragen, damit die Klassen zwischen den Szenarien vergleichbar bleiben.</p>
+    <div class="info-source">Quelle: Masterarbeit, Kap. 5.1.5</div>`
+  },
+  fahrzeugpotenzial: {
+    title: 'Fahrzeugpotenzial',
+    body: `<p>Berechnet in drei Schritten: (1) führerscheinbesitzende Bevölkerung des Gebiets (angenommen 80 % der Über-18-Jährigen), (2) multipliziert mit einer Erreichungsquote, die je nach Potenzialklasse und Durchdringungsszenario unterschiedlich hoch ausfällt, ergibt die „erreichten Personen", (3) geteilt durch eine angenommene Nutzer:innenzahl je Fahrzeug ergibt die gerundete Fahrzeuganzahl.</p>
+    <p>Das Ergebnis ist nicht szenariounabhängig: Je nach gewähltem Gewichtungsszenario ergeben sich unterschiedliche Fahrzeugzahlen.</p>
+    <div class="info-source">Quelle: Masterarbeit, Kap. 5.2.1–5.2.2</div>`
+  },
+  bevoelkerungsdichteEcht: {
+    title: 'Bevölkerungsdichte',
+    body: `<p>Dieser Wert ist die tatsächliche Einwohnerdichte (Einwohner:innen je km²), berechnet aus Einwohnerzahl und geometrischer Fläche des statistischen Gebiets.</p>
+    <p>Er unterscheidet sich vom gleichnamigen <em>Indikator</em> innerhalb der Subgruppe Lagebedingungen, der auf eine 1–2-Skala normiert in den Potenzialindex einfließt (im Dropdown „Bevölkerungsdichte" unter Lagebedingungen – im Detail).</p>`
+  },
+};
+
+function toggleInfoPopover(key, btnEl) {
+  const pop = document.getElementById('info-popover');
+  const wasOpenForThis = pop.dataset.key === key && !pop.classList.contains('hidden');
+  if (wasOpenForThis) {
+    pop.classList.add('hidden');
+    return;
+  }
+  const info = INFO_TEXTS[key];
+  if (!info) return;
+  document.getElementById('info-popover-title').textContent = info.title;
+  document.getElementById('info-popover-body').innerHTML = info.body;
+  pop.dataset.key = key;
+  pop.classList.remove('hidden');
+
+  const rect = btnEl.getBoundingClientRect();
+  const popWidth = 280;
+  let left = rect.left;
+  if (left + popWidth + 16 > window.innerWidth) left = window.innerWidth - popWidth - 16;
+  pop.style.left = Math.max(8, left) + 'px';
+
+  // Nach unten öffnen, falls genug Platz, sonst nach oben
+  const estHeight = Math.min(pop.scrollHeight || 200, window.innerHeight * 0.6);
+  if (rect.bottom + estHeight + 10 < window.innerHeight) {
+    pop.style.top = (rect.bottom + 6) + 'px';
+    pop.style.bottom = 'auto';
+  } else {
+    pop.style.top = 'auto';
+    pop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('info-popover');
+  if (pop.classList.contains('hidden')) return;
+  if (e.target.closest('.info-btn') || e.target.closest('#info-popover')) return;
+  pop.classList.add('hidden');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.getElementById('info-popover').classList.add('hidden');
+});
 
 // ── VERGLEICH: großes Modal ─────────────────────────────────────────────────────
 let compareModalOpen = false;
@@ -1584,6 +1973,11 @@ function focusOnStadtteile(stadtteilListe) {
   const features = dataFahrzeuge.features.filter(f => stSet.has(f.properties.Stadtteil));
   if (!features.length) return;
 
+  // Gebiete außerhalb der Auswahl abblenden
+  focusedStadtteile = stadtteilListe;
+  if (map.getLayer('layer-fahrzeuge')) map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', getOpacityExpr());
+  if (map.getLayer('layer-subgruppen')) map.setPaintProperty('layer-subgruppen', 'fill-opacity', getOpacityExpr());
+
   // Gebietsgrenzen zu einer Umrisslinie verschmelzen (Turf.js)
   let boundaryGeoJSON;
   try {
@@ -1619,6 +2013,12 @@ function resetFokus() {
   if (map.getLayer('layer-boundary-highlight')) {
     map.setLayoutProperty('layer-boundary-highlight', 'visibility', 'none');
   }
+
+  // Abblendung aufheben
+  focusedStadtteile = null;
+  if (map.getLayer('layer-fahrzeuge')) map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', getOpacityExpr());
+  if (map.getLayer('layer-subgruppen')) map.setPaintProperty('layer-subgruppen', 'fill-opacity', getOpacityExpr());
+
   map.flyTo({ center: [10.0, 53.55], zoom: 10, duration: 600 });
 }
 
@@ -1656,8 +2056,8 @@ function setPalette(palette) {
 function setOpacity(value) {
   currentOpacity = value / 100;
   document.getElementById('opacity-value').textContent = `${value}%`;
-  if (map.getLayer('layer-fahrzeuge')) map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', currentOpacity);
-  if (map.getLayer('layer-subgruppen')) map.setPaintProperty('layer-subgruppen', 'fill-opacity', currentOpacity);
+  if (map.getLayer('layer-fahrzeuge')) map.setPaintProperty('layer-fahrzeuge', 'fill-opacity', getOpacityExpr());
+  if (map.getLayer('layer-subgruppen')) map.setPaintProperty('layer-subgruppen', 'fill-opacity', getOpacityExpr());
 }
 
 function updateLegendGradient() {
